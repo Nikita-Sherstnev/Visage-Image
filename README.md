@@ -41,9 +41,9 @@ python scripts/generate.py "a young woman with long red hair and freckles, soft 
 The weights download from the [Hugging Face repo](https://huggingface.co/Sherstnev/Visage-Image) on first use. `--model` also takes a local copy:
 `huggingface-cli download Sherstnev/Visage-Image --local-dir weights`, then `--model weights`. The loaders read one folder per
 component: `transformer/` and `vae/` hold `config.json` + `model.safetensors`, and `text_encoder/config.json` names
-the frozen Qwen3 encoder.
+the frozen Qwen3 encoder. The root `config.json` records the sampler settings tuned for the weights.
 
-Recommended sampler settings, which are the defaults: `--solver sde --churn 0.3 --cfg 3 --steps 50 --shift 3.3`.
+Recommended sampler settings, which the scripts read from that file: `--solver sde --churn 0.3 --cfg 3 --steps 50 --shift 3.3`.
 - **Euler**: crisper but less realistic.
 - **churn**: applied every step, so raising `--steps` without lowering churn washes the image out.
 - **shift**: depends on the token count. Retune it if you change resolution.

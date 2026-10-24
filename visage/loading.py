@@ -2,7 +2,8 @@
 
 One folder per component, as on the Hub: transformer/ and vae/ hold config.json +
 model.safetensors; text_encoder/config.json names the frozen Qwen3 encoder, which is
-fetched from its own hub repo.
+fetched from its own hub repo. The root config.json holds the sampler settings tuned for
+these weights.
 """
 
 import json
@@ -25,7 +26,7 @@ def resolve(model: str | Path) -> Path:
     path = Path(model)
     if path.is_dir():
         return path
-    return Path(snapshot_download(str(model), allow_patterns=["*/config.json", "*/model.safetensors"]))
+    return Path(snapshot_download(str(model), allow_patterns=["config.json", "*/config.json", "*/model.safetensors"]))
 
 
 def _config(cls, path: Path):
@@ -51,6 +52,15 @@ def load_vae(model: str | Path = REPO_ID, device="cuda", dtype=torch.bfloat16) -
     vae = VisageVAE(_config(VAEConfig, folder / "config.json"))
     vae.load_state_dict(load_file(folder / "model.safetensors"))
     return vae.to(device, dtype).eval()
+
+
+def load_sampling(model: str | Path = REPO_ID) -> dict:
+    """The sampler settings the root config.json records, as keyword arguments for sample().
+
+    Empty for a folder without one (e.g. a fresh training output); sample()'s defaults apply.
+    """
+    path = resolve(model) / "config.json"
+    return json.loads(path.read_text())["sampling"] if path.is_file() else {}
 
 
 def save_component(folder: Path, config: dict, state: dict | None = None) -> None:

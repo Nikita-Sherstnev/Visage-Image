@@ -2,10 +2,10 @@
 
     python scripts/make_showcase.py --output showcase.png
 
-Each tile is one image (batch 1) with the default sampler settings (SDE, churn 0.3,
-CFG 3.0, 50 steps, shift 3.3, bf16 on CUDA) and the seed listed below, so any tile is
-also `python scripts/generate.py "<prompt>" --n 1 --seed <seed>`. GPU bf16 rounding can move
-pixels slightly between machines.
+Each tile is one image (batch 1) with the sampler settings from the model's config.json
+(SDE, churn 0.3, CFG 3.0, 50 steps, shift 3.3; bf16 on CUDA) and the seed listed below, so
+any tile is also `python scripts/generate.py "<prompt>" --n 1 --seed <seed>`. GPU bf16
+rounding can move pixels slightly between machines.
 """
 
 import argparse
@@ -13,7 +13,7 @@ import argparse
 import torch
 from PIL import Image
 
-from visage import REPO_ID, load_dit, load_text_encoder, load_vae, sample
+from visage import REPO_ID, load_dit, load_sampling, load_text_encoder, load_vae, sample
 
 TILES = [
     {
@@ -59,11 +59,12 @@ def main() -> None:
     text_encoder = load_text_encoder(args.model, device, dtype)
     dit = load_dit(args.model, device, dtype)
     vae = load_vae(args.model, device, dtype)
+    settings = load_sampling(args.model)
 
     strip = Image.new("RGB", (256 * len(TILES), 256))
     for i, tile in enumerate(TILES):
         text, mask = text_encoder([tile["prompt"]])
-        latents = sample(dit, text, mask, latent_size=dit.config.image_size, seed=tile["seed"])
+        latents = sample(dit, text, mask, latent_size=dit.config.image_size, seed=tile["seed"], **settings)
         with torch.no_grad():
             image = vae.decode(latents)[0].float()
         pixels = ((image + 1) * 127.5).round().clamp(0, 255).byte().permute(1, 2, 0).cpu().numpy()
