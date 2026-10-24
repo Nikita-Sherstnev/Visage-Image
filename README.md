@@ -1,6 +1,6 @@
 # Visage-Image
 
-**[Model card and weights](https://huggingface.co/Sherstnev/Visage-Image)** · **[Architecture](https://github.com/Nikita-Sherstnev/Visage-Image/blob/main/ARCHITECTURE.md)** · **[Prompting](https://github.com/Nikita-Sherstnev/Visage-Image/blob/main/PROMPTING.md)** · **[Data](https://github.com/Nikita-Sherstnev/Visage-Image/blob/main/DATA.md)**
+**[Model card and weights](https://huggingface.co/Sherstnev/Visage-Image)** · **[Architecture](https://github.com/Nikita-Sherstnev/Visage-Image/blob/main/ARCHITECTURE.md)** · **[Prompting](https://github.com/Nikita-Sherstnev/Visage-Image/blob/main/PROMPTING.md)** · **[Data](https://github.com/Nikita-Sherstnev/Visage-Image/blob/main/DATA.md)** · **[ComfyUI](https://github.com/Nikita-Sherstnev/ComfyUI-Visage)**
 
 ![Five 256px samples: smiling, angry, surprised, laughing, tongue out](https://raw.githubusercontent.com/Nikita-Sherstnev/Visage-Image/main/assets/showcase.png)
 
@@ -56,6 +56,11 @@ in order, with common values and examples. 256px only: the VAE loses 3.2 dB on e
 
 The strip at the top is `python scripts/make_showcase.py`: default sampler settings, with the prompts and seeds
 listed in the script, one image per seed. Any tile is also `python scripts/generate.py "<prompt>" --n 1 --seed <seed>`.
+
+### ComfyUI
+
+[ComfyUI-Visage](https://github.com/Nikita-Sherstnev/ComfyUI-Visage) adds loader, text-encode, sampler and decode nodes, with an example workflow.
+Install it from ComfyUI Manager (search "Visage") or with `comfy node install comfyui-visage`.
 
 ## Repository layout
 

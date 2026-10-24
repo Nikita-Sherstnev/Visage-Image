@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "visage-image"
-version = "1.0.0"
+version = "1.0.1"
 description = "A 256px text-to-image model for face generation: single-stream rectified-flow DiT over an f16x96 VAE latent."
 readme = "README.md"
 license = "Apache-2.0"
