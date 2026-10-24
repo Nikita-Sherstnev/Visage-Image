@@ -18,6 +18,11 @@ dependencies = [
     "pillow",
 ]
 
+[project.urls]
+Repository = "https://github.com/Nikita-Sherstnev/Visage-Image"
+Weights = "https://huggingface.co/Sherstnev/Visage-Image"
+Prompting = "https://github.com/Nikita-Sherstnev/Visage-Image/blob/main/PROMPTING.md"
+
 [project.optional-dependencies]
 train = [
     "pyyaml",

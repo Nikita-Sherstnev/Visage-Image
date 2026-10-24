@@ -5,3 +5,6 @@ data/
 __pycache__/
 *.png
 !assets/*.png
+*.egg-info/
+build/
+dist/

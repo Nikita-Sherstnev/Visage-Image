@@ -1,8 +1,8 @@
 # Visage-Image
 
-**[Model card and weights](https://huggingface.co/Sherstnev/Visage-Image)** · **[Architecture](ARCHITECTURE.md)** · **[Prompting](PROMPTING.md)** · **[Data](DATA.md)**
+**[Model card and weights](https://huggingface.co/Sherstnev/Visage-Image)** · **[Architecture](https://github.com/Nikita-Sherstnev/Visage-Image/blob/main/ARCHITECTURE.md)** · **[Prompting](https://github.com/Nikita-Sherstnev/Visage-Image/blob/main/PROMPTING.md)** · **[Data](https://github.com/Nikita-Sherstnev/Visage-Image/blob/main/DATA.md)**
 
-![Five 256px samples: smiling, angry, surprised, laughing, tongue out](assets/showcase.png)
+![Five 256px samples: smiling, angry, surprised, laughing, tongue out](https://raw.githubusercontent.com/Nikita-Sherstnev/Visage-Image/main/assets/showcase.png)
 
 ## Introduction
 
@@ -12,7 +12,7 @@ layer 8 of Qwen3-0.6B.
 
 This model started as an experiment in training a DiT on data from a limited domain. With so many models available for face detection and for tasks like age and gaze estimation, preparing a custom dataset was fairly simple, time-consuming, but simple. I first tried the FLUX.2 VAE, but it turned out that the plastic look is an inherent vice of that model, it turns anything it touches into plastic. It is optimized for learnability, its latent channels have a lot of redundancy, and it fakes details with GAN-style generation, which makes them look plausible rather than faithful. So I trained my own autoencoder using the latest ideas and recipes, and it turned out quite well. Qwen3-0.6B makes the model robust to variations in prompt wording, and unlike most small general-purpose DiTs, it generates quite good faces. In fact, to train a very specific DiT you don't need a big dataset: a set of similar images that differ only in details is enough, because a DiT interpolates between them very well. The first version of this model was like that. I found a "good region" densely populated with similar images. Samples from it were very realistic, and outside it they were a mess.
 
-The [model card](https://huggingface.co/Sherstnev/Visage-Image) has the highlights, samples and evaluation. [ARCHITECTURE.md](ARCHITECTURE.md) covers each design choice and what was tried instead.
+The [model card](https://huggingface.co/Sherstnev/Visage-Image) has the highlights, samples and evaluation. [ARCHITECTURE.md](https://github.com/Nikita-Sherstnev/Visage-Image/blob/main/ARCHITECTURE.md) covers each design choice and what was tried instead.
 
 ## Repository layout
 
@@ -43,6 +43,21 @@ The weights download from the [Hugging Face repo](https://huggingface.co/Sherstn
 component: `transformer/` and `vae/` hold `config.json` + `model.safetensors`, and `text_encoder/config.json` names
 the frozen Qwen3 encoder. The root `config.json` records the sampler settings tuned for the weights.
 
+To use the model from Python without the repo scripts, install the package from PyPI:
+
+```bash
+pip install visage-image
+```
+
+```python
+from visage import load_dit, load_sampling, load_text_encoder, load_vae, sample
+
+text_encoder, dit, vae = load_text_encoder(), load_dit(), load_vae()
+text, mask = text_encoder(["a young woman with long red hair and freckles, soft window light"])
+latents = sample(dit, text, mask, latent_size=dit.config.image_size, seed=0, **load_sampling())
+images = vae.decode(latents)  # (N, 3, 256, 256) in [-1, 1]
+```
+
 Recommended sampler settings, which the scripts read from that file: `--solver sde --churn 0.3 --cfg 3 --steps 50 --shift 3.3`.
 - **Euler**: crisper but less realistic.
 - **churn**: applied every step, so raising `--steps` without lowering churn washes the image out.
@@ -51,7 +66,7 @@ Recommended sampler settings, which the scripts read from that file: `--solver s
 
 Detailed structured captions follow best, but
 short and casual prompts were trained from step 0 and work. Bare prompts default to sharp; no sharpness word is needed.
-[PROMPTING.md](PROMPTING.md) lists the long-caption slots in order, with common values and examples.
+[PROMPTING.md](https://github.com/Nikita-Sherstnev/Visage-Image/blob/main/PROMPTING.md) lists the long-caption slots in order, with common values and examples.
 256px only: the VAE loses 3.2 dB on eye crops at 512.
 
 The strip at the top is `python scripts/make_showcase.py`: default sampler settings, with the
@@ -86,7 +101,7 @@ python scripts/train_dit.py configs/dit.yaml   # uses the VAE in `vae:` -> runs/
   loop drops uniformly.
 - Muon + AdamW, EMA 0.999 every 10 steps, batch 64×2.
 - The release then ran `configs/dit_adversarial.yaml`: 1000 updates of latent adversarial post-training on the
-  anneal checkpoint (see [ARCHITECTURE.md](ARCHITECTURE.md#training)).
+  anneal checkpoint (see [ARCHITECTURE.md](https://github.com/Nikita-Sherstnev/Visage-Image/blob/main/ARCHITECTURE.md#training)).
 
 Checkpoint names (200k, 220k, 222k) count batches of 64, as the training repo did. `scripts/train_dit.py`
 counts optimizer updates of 64×2, so 222k there is step 111,000.
@@ -110,7 +125,7 @@ Lint and format with `ruff check . && ruff format .` (config in `pyproject.toml`
 
 ## License
 
-The code and the weights are [Apache-2.0](LICENSE).
+The code and the weights are [Apache-2.0](https://github.com/Nikita-Sherstnev/Visage-Image/blob/main/LICENSE).
 
 ## References
 
