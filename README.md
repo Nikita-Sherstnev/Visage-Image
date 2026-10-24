@@ -14,24 +14,6 @@ This model started as an experiment in training a DiT on data from a limited dom
 
 The [model card](https://huggingface.co/Sherstnev/Visage-Image) has the highlights, samples and evaluation. [ARCHITECTURE.md](https://github.com/Nikita-Sherstnev/Visage-Image/blob/main/ARCHITECTURE.md) covers each design choice and what was tried instead.
 
-## Repository layout
-
-| path | what |
-|---|---|
-| `visage/dit.py` | DiT: 18 single-stream blocks, width 768, adaLN timestep conditioning, Qwen3-0.6B captions with learned bucket pads and 16 registers, spiral 2D RoPE |
-| `visage/vae.py` | VAE: Haar-wavelet conv encoder with self-attention at f8 and f16 → 96ch f16 latent; two-stage ViT decoder (f16 → f8) + 8×8 patch head + two residual conv refiners |
-| `visage/sampling.py` | Qwen3 text encoder (first 8 layers), rectified-flow sampler (Euler / SDE churn, CFG) |
-| `visage/loading.py` | `load_dit` / `load_vae` / `load_text_encoder` / `load_sampling` from a model directory or hub repo id |
-| `visage/training.py` | manifest dataset, config loading, Muon + AdamW, LR schedule |
-| `visage/adversarial.py` | latent critic for adversarial post-training: trainable heads on a frozen copy of the DiT |
-| `scripts/generate.py` | text-to-image CLI |
-| `scripts/make_showcase.py` | rebuilds `assets/showcase.png`; holds each tile's prompt and seed |
-| `scripts/crop_faces.py` | square head crops from a photo folder, plus a `train.jsonl` manifest |
-| `scripts/train_dit.py`, `scripts/train_vae.py` | training loops; configs in `configs/` (`dit_adversarial.yaml` is the release's last stage) |
-| `ARCHITECTURE.md` | each design choice and what was tried instead |
-| `PROMPTING.md` | long-caption format, vocabulary and example prompts |
-| `DATA.md` | how the images were curated and captioned, and which model labels each slot |
-
 ## Quick Start
 
 ```bash
@@ -74,6 +56,24 @@ in order, with common values and examples. 256px only: the VAE loses 3.2 dB on e
 
 The strip at the top is `python scripts/make_showcase.py`: default sampler settings, with the prompts and seeds
 listed in the script, one image per seed. Any tile is also `python scripts/generate.py "<prompt>" --n 1 --seed <seed>`.
+
+## Repository layout
+
+| path | what |
+|---|---|
+| `visage/dit.py` | DiT: 18 single-stream blocks, width 768, adaLN timestep conditioning, Qwen3-0.6B captions with learned bucket pads and 16 registers, spiral 2D RoPE |
+| `visage/vae.py` | VAE: Haar-wavelet conv encoder with self-attention at f8 and f16 → 96ch f16 latent; two-stage ViT decoder (f16 → f8) + 8×8 patch head + two residual conv refiners |
+| `visage/sampling.py` | Qwen3 text encoder (first 8 layers), rectified-flow sampler (Euler / SDE churn, CFG) |
+| `visage/loading.py` | `load_dit` / `load_vae` / `load_text_encoder` / `load_sampling` from a model directory or hub repo id |
+| `visage/training.py` | manifest dataset, config loading, Muon + AdamW, LR schedule |
+| `visage/adversarial.py` | latent critic for adversarial post-training: trainable heads on a frozen copy of the DiT |
+| `scripts/generate.py` | text-to-image CLI |
+| `scripts/make_showcase.py` | rebuilds `assets/showcase.png`; holds each tile's prompt and seed |
+| `scripts/crop_faces.py` | square head crops from a photo folder, plus a `train.jsonl` manifest |
+| `scripts/train_dit.py`, `scripts/train_vae.py` | training loops; configs in `configs/` (`dit_adversarial.yaml` is the release's last stage) |
+| `ARCHITECTURE.md` | each design choice and what was tried instead |
+| `PROMPTING.md` | long-caption format, vocabulary and example prompts |
+| `DATA.md` | how the images were curated and captioned, and which model labels each slot |
 
 ## Train
 
