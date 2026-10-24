@@ -1,0 +1,7 @@
+weights*/
+runs/
+models/
+data/
+__pycache__/
+*.png
+!assets/*.png

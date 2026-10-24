@@ -1,0 +1,40 @@
+# Visage-Image DiT: 237M single-stream transformer on 16x16x96 latents (256px).
+data: data/train.jsonl          # {"image": ..., "caption": ...} per line
+vae: Sherstnev/Visage-Image     # model dir or hub repo id with vae/ (frozen)
+output: runs/dit
+model:
+  image_size: 16
+  in_channels: 96
+  patch_size: 1
+  width: 768
+  depth: 18
+  mlp_ratio: 4
+  text_dim: 1024
+  text_length_buckets: [32, 64, 96, 128]
+  n_text_registers: 16
+resolution: 256
+batch_size: 64
+grad_accum: 2
+workers: 8
+steps: 140000                   # LR schedule length in optimizer updates; the release stopped at 100000 ("200k") and annealed
+warmup_steps: 0                  # the release used no warmup
+lr_adam: 3.0e-4
+lr_muon: 1.0e-3
+lr_final_frac: 0.1
+weight_decay: 1.0e-4
+grad_clip: 1.0
+caption_dropout: 0.2            # zero text embedding = the CFG unconditional branch
+shift_ref_tokens: 64            # train shift = sqrt(tokens / 64) -> 2.0 at 256 tokens
+ema_decay: 0.999
+ema_every: 10
+compile: true
+log_every: 100
+sample_every: 5000
+save_every: 5000
+sample_prompts:
+  - "a young woman with long red hair and freckles, smiling, looking at the camera, soft window light"
+  - "a middle-aged man with a grey beard, three-quarter view, studio lighting"
+seed: 0
+init: null                      # model dir or hub repo id to fine-tune transformer/ from
+resume: null                    # a runs/dit/step_*.pt checkpoint
+adversarial: null               # see configs/dit_adversarial.yaml

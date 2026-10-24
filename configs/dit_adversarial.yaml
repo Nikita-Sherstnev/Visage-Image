@@ -1,0 +1,56 @@
+# Latent adversarial post-training, the release's last stage (220k -> 222k in the training
+# repo's micro-batch count = 1000 steps of batch 128 here). Fine-tunes `init` with the flow
+# loss plus a critic term (visage/adversarial.py); the critic's frozen backbone is `init` too.
+# The release ran it on the sharp and very-sharp subset only, at the anneal's floor LR, held flat.
+# 1000 steps was chosen by eye: by 2000 steps layouts and identities began to move.
+data: data/train.jsonl          # {"image": ..., "caption": ...} per line
+vae: Sherstnev/Visage-Image     # model dir or hub repo id with vae/ (frozen)
+output: runs/dit_adversarial
+model:
+  image_size: 16
+  in_channels: 96
+  patch_size: 1
+  width: 768
+  depth: 18
+  mlp_ratio: 4
+  text_dim: 1024
+  text_length_buckets: [32, 64, 96, 128]
+  n_text_registers: 16
+resolution: 256
+batch_size: 64
+grad_accum: 2
+workers: 8
+steps: 1000
+warmup_steps: 0                  # the release used no warmup
+lr_adam: 3.0e-5
+lr_muon: 1.0e-4
+lr_final_frac: 1.0             # flat LR
+weight_decay: 1.0e-4
+grad_clip: 1.0
+caption_dropout: 0.2            # zero text embedding = the CFG unconditional branch
+shift_ref_tokens: 64            # train shift = sqrt(tokens / 64) -> 2.0 at 256 tokens
+ema_decay: 0.999
+ema_every: 10
+compile: true
+log_every: 100
+sample_every: 250
+save_every: 500
+sample_prompts:
+  - "a young woman with long red hair and freckles, smiling, looking at the camera, soft window light"
+  - "a middle-aged man with a grey beard, three-quarter view, studio lighting"
+seed: 0
+init: Sherstnev/Visage-Image    # the model to post-train (the release forked from the 220k anneal)
+resume: null                    # a runs/dit/step_*.pt checkpoint
+adversarial:
+  weight: 0.006                 # next to a flow loss of ~0.52
+  layers: [5, 11, 17]           # backbone blocks the heads read
+  head_hidden: 256
+  t_mean: -1.0                  # critic noise level, logit-normal; median t = 0.27
+  t_std: 1.0
+  center_latents: true          # stops the critic being fooled by colour shifts
+  r1_weight: 100.0              # approximated R1 (APT)
+  r1_sigma: 0.01
+  lr: 1.0e-4                    # critic heads, AdamW betas (0, 0.99)
+  slice: 8                      # images per micro-batch the critic sees
+  warmup_steps: 200             # critic-only steps before the generator term starts
+  backbone: null                # model dir for the frozen critic backbone; null = init

@@ -1,0 +1,28 @@
+# Visage-Image VAE (f16, 96 channels). Recipe of the released checkpoint:
+# Charbonnier + 3.0 LPIPS + 0.4 DINOv2 alignment, no KL, no GAN, Muon on the decoder,
+# horizontal flips; the phase-template term from step 80k on.
+data: data/train.jsonl          # {"image": ...} per line
+output: runs/vae
+resolution: 256
+batch_size: 8
+workers: 8
+steps: 400000                   # the release is the final checkpoint of this schedule
+warmup_steps: 2000
+lr: 2.0e-4
+lr_final_frac: 0.1
+weight_decay: 1.0e-4
+hflip: true
+perceptual_weight: 3.0
+align_weight: 0.4
+align_mdms_weight: 1.0
+align_model: vit_large_patch14_dinov2.lvd142m
+align_resolution: 224           # 224 / 14 = 16x16, the latent grid
+align_ramp_steps: 200000        # margins loosen from 0 ...
+align_margin_cap: 0.2           # ... to 0.2 of (0.5 cos, 0.3 dist), then hold
+phase_template_weight: 1.0
+phase_template_start: 80000
+compile: true
+log_every: 100
+save_every: 5000
+seed: 42
+resume: null
