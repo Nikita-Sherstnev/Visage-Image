@@ -21,57 +21,59 @@ The [model card](https://huggingface.co/Sherstnev/Visage-Image) has the highligh
 | `visage/dit.py` | DiT: 18 single-stream blocks, width 768, adaLN timestep conditioning, Qwen3-0.6B captions with learned bucket pads and 16 registers, spiral 2D RoPE |
 | `visage/vae.py` | VAE: Haar-wavelet conv encoder with self-attention at f8 and f16 → 96ch f16 latent; two-stage ViT decoder (f16 → f8) + 8×8 patch head + two residual conv refiners |
 | `visage/sampling.py` | Qwen3 text encoder (first 8 layers), rectified-flow sampler (Euler / SDE churn, CFG) |
-| `visage/loading.py` | `load_dit` / `load_vae` / `load_text_encoder` from a model directory or hub repo id |
+| `visage/loading.py` | `load_dit` / `load_vae` / `load_text_encoder` / `load_sampling` from a model directory or hub repo id |
 | `visage/training.py` | manifest dataset, config loading, Muon + AdamW, LR schedule |
 | `visage/adversarial.py` | latent critic for adversarial post-training: trainable heads on a frozen copy of the DiT |
 | `scripts/generate.py` | text-to-image CLI |
 | `scripts/make_showcase.py` | rebuilds `assets/showcase.png`; holds each tile's prompt and seed |
-| `PROMPTING.md` | long-caption format, vocabulary and example prompts |
-| `DATA.md` | how the images were curated and captioned, and which model labels each slot |
 | `scripts/crop_faces.py` | square head crops from a photo folder, plus a `train.jsonl` manifest |
 | `scripts/train_dit.py`, `scripts/train_vae.py` | training loops; configs in `configs/` (`dit_adversarial.yaml` is the release's last stage) |
+| `ARCHITECTURE.md` | each design choice and what was tried instead |
+| `PROMPTING.md` | long-caption format, vocabulary and example prompts |
+| `DATA.md` | how the images were curated and captioned, and which model labels each slot |
 
 ## Quick Start
-
-```bash
-pip install -e .            # add [train] for training: pip install -e ".[train]"
-python scripts/generate.py "a young woman with long red hair and freckles, soft window light" --n 4
-```
-
-The weights download from the [Hugging Face repo](https://huggingface.co/Sherstnev/Visage-Image) on first use. `--model` also takes a local copy:
-`huggingface-cli download Sherstnev/Visage-Image --local-dir weights`, then `--model weights`. The loaders read one folder per
-component: `transformer/` and `vae/` hold `config.json` + `model.safetensors`, and `text_encoder/config.json` names
-the frozen Qwen3 encoder. The root `config.json` records the sampler settings tuned for the weights.
-
-To use the model from Python without the repo scripts, install the package from PyPI:
 
 ```bash
 pip install visage-image
 ```
 
 ```python
+from torchvision.utils import save_image
 from visage import load_dit, load_sampling, load_text_encoder, load_vae, sample
 
 text_encoder, dit, vae = load_text_encoder(), load_dit(), load_vae()
 text, mask = text_encoder(["a young woman with long red hair and freckles, soft window light"])
 latents = sample(dit, text, mask, latent_size=dit.config.image_size, seed=0, **load_sampling())
 images = vae.decode(latents)  # (N, 3, 256, 256) in [-1, 1]
+save_image((images.float() + 1) / 2, "face.png")
 ```
 
-Recommended sampler settings, which the scripts read from that file: `--solver sde --churn 0.3 --cfg 3 --steps 50 --shift 3.3`.
+From a clone of this repo, the scripts do the same from the command line:
+
+```bash
+pip install -e .            # add [train] for training: pip install -e ".[train]"
+python scripts/generate.py "a young woman with long red hair and freckles, soft window light" --n 4
+```
+
+The weights download from the [Hugging Face repo](https://huggingface.co/Sherstnev/Visage-Image) on first use.
+The loaders and `--model` also take a local copy: `huggingface-cli download Sherstnev/Visage-Image --local-dir weights`,
+then `load_dit("weights")` or `--model weights`. Each component has its own folder: `transformer/` and `vae/` hold
+`config.json` + `model.safetensors`, and `text_encoder/config.json` names the frozen Qwen3 encoder.
+The root `config.json` records the sampler settings tuned for the weights, which `load_sampling()` and the scripts read:
+`--solver sde --churn 0.3 --cfg 3 --steps 50 --shift 3.3`, plus `sde_t_max` 0.9 (no re-noising above t = 0.9).
 - **Euler**: crisper but less realistic.
 - **churn**: applied every step, so raising `--steps` without lowering churn washes the image out.
 - **shift**: depends on the token count. Retune it if you change resolution.
 - **cfg**: depends on the caption-dropout rate.
 
-Detailed structured captions follow best, but
-short and casual prompts were trained from step 0 and work. Bare prompts default to sharp; no sharpness word is needed.
-[PROMPTING.md](https://github.com/Nikita-Sherstnev/Visage-Image/blob/main/PROMPTING.md) lists the long-caption slots in order, with common values and examples.
-256px only: the VAE loses 3.2 dB on eye crops at 512.
+Detailed structured captions follow best, but short and casual prompts were trained from step 0 and work.
+Bare prompts default to sharp; no sharpness word is needed.
+[PROMPTING.md](https://github.com/Nikita-Sherstnev/Visage-Image/blob/main/PROMPTING.md) lists the long-caption slots
+in order, with common values and examples. 256px only: the VAE loses 3.2 dB on eye crops at 512.
 
-The strip at the top is `python scripts/make_showcase.py`: default sampler settings, with the
-prompts and seeds listed in the script, one image per seed. Any tile is also
-`python scripts/generate.py "<prompt>" --n 1 --seed <seed>`.
+The strip at the top is `python scripts/make_showcase.py`: default sampler settings, with the prompts and seeds
+listed in the script, one image per seed. Any tile is also `python scripts/generate.py "<prompt>" --n 1 --seed <seed>`.
 
 ## Train
 
@@ -84,8 +86,8 @@ margins as the release data (YOLO face weights, AGPL-3.0; the download line is i
 ```bash
 pip install -e ".[data]"
 python scripts/crop_faces.py photos/ -o data/          # -> data/images/..., data/train.jsonl
-python scripts/train_vae.py configs/vae.yaml   # -> runs/vae/vae/ (+ latent stats)
-python scripts/train_dit.py configs/dit.yaml   # uses the VAE in `vae:` -> runs/dit/transformer/ (EMA)
+python scripts/train_vae.py configs/vae.yaml           # -> runs/vae/vae/ (+ latent stats)
+python scripts/train_dit.py configs/dit.yaml           # uses the VAE in `vae:` -> runs/dit/transformer/ (EMA)
 ```
 
 **VAE**
@@ -99,9 +101,11 @@ python scripts/train_dit.py configs/dit.yaml   # uses the VAE in `vae:` -> runs/
 - 20% caption dropout to a zero embedding. The release drew dropout from sharp images only and
   omitted the sharpness word on sharp captions, so an unspecified prompt defaults to sharp; this
   loop drops uniformly.
-- Muon + AdamW, EMA 0.999 every 10 steps, batch 64×2.
+- Muon + AdamW, cosine LR schedule, EMA 0.999 every 10 steps, batch 64×2.
+- The release stopped the base run at 200k and annealed it for 20k more on sharp and very-sharp images only
+  (200k → 220k; see [ARCHITECTURE.md](https://github.com/Nikita-Sherstnev/Visage-Image/blob/main/ARCHITECTURE.md#training)).
 - The release then ran `configs/dit_adversarial.yaml`: 1000 updates of latent adversarial post-training on the
-  anneal checkpoint (see [ARCHITECTURE.md](https://github.com/Nikita-Sherstnev/Visage-Image/blob/main/ARCHITECTURE.md#training)).
+  220k anneal checkpoint (see [ARCHITECTURE.md](https://github.com/Nikita-Sherstnev/Visage-Image/blob/main/ARCHITECTURE.md#training)).
 
 Checkpoint names (200k, 220k, 222k) count batches of 64, as the training repo did. `scripts/train_dit.py`
 counts optimizer updates of 64×2, so 222k there is step 111,000.
